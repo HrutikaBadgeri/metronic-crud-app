@@ -12,6 +12,7 @@ import {
   deleteFile,
   getAllFiles,
   findEmployeeByToken,
+  employeeFileCount,
 } from "../controllers/employee_controller";
 import protect from "../middleware/employeeAuth";
 const router = express.Router();
@@ -19,6 +20,7 @@ const router = express.Router();
 router.route("/getempdetails").get(protect, getAllDetails);
 router.route("/signup").post(employeeSignup);
 router.route("/login").post(employeeLogin);
+router.route("/loadFileCount").get(protect, employeeFileCount);
 router.route("/updatePassword").put(protect, updatePassword);
 router.route("/updateDetails").patch(protect, employeeUpdateDetails);
 router.route("/logout").get(protect, employeeLogout);

@@ -4,6 +4,7 @@ import asyncWrapper from "../middleware/async";
 import multer from "multer";
 import fs from "fs";
 import path, { dirname } from "path";
+import mime from "mime-types";
 
 //@description show all emp details
 //@route GET /api/v1/employee
@@ -148,6 +149,18 @@ export const findEmployeeByToken = asyncWrapper(async (req, res) => {
   res.status(200).json({ success: true, data: req.employee });
 });
 
+// @description returns total number of files uploaded by a single employee
+// @route POST /api/v1/employee/count
+// @access public
+export const employeeFileCount = asyncWrapper((req, res) => {
+  const total_files = req.employee.files.length;
+  console.log(total_files);
+  if (!total_files) {
+    res.status(404).json({ message: "count cannot be fetched" });
+  }
+  res.status(200).json({ message: "Count fetched", data: { total_files } });
+});
+
 //@description update file by an employee
 //@route POST /api/v1/employee/updateFile
 //@access private
@@ -155,11 +168,12 @@ export const updateFile = asyncWrapper(async (req, res) => {
   const __dirname = dirname(new URL(import.meta.url).pathname).substring(1);
   //id of the file that is to be updated
   const fileid = req.params.id;
+  console.log(req.file);
   const updatedEmployee = await Employee.updateOne(
     { _id: req.employee._id, "files._id": fileid },
     {
       $set: {
-        "files.$.contentType": req.file.mimeType,
+        "files.$.contentType": mime.lookup(req.file.filename),
         "files.$.data": fs.readFileSync(
           path.join(
             __dirname.split("/").slice(0, -1).join("/") +
@@ -175,6 +189,18 @@ export const updateFile = asyncWrapper(async (req, res) => {
   if (updatedEmployee.nModified === 0) {
     return res.status(404).json({ success: false, message: "File not found" });
   }
+
+  //delete the uploaded file from the local repository
+  await fs.unlink(
+    path.join(
+      __dirname.split("/").slice(0, -1).join("/") +
+        "/uploads/" +
+        req.file.filename
+    ),
+    (err) => {
+      if (err) throw err;
+    }
+  );
 
   res.status(200).json({
     success: true,

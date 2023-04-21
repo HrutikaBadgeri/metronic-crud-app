@@ -28,7 +28,6 @@ export function Documents() {
       },
     })
     const employee_id = result1.data.data._id
-    console.log(employee_id)
     setEmployee_id(employee_id)
   }
 
@@ -40,13 +39,12 @@ export function Documents() {
         Authorization: 'Bearer ' + varToken,
       },
     })
-    console.log(result.data.data)
     setUserFiles(result.data.data)
   }
   const deleteFile = async (id: any) => {
     try {
       const varToken = localStorage.getItem('token')
-      const url = 'http://localhost:3000/api/v1/employee/deleteFile/' + '/' + id
+      const url = 'http://localhost:3000/api/v1/employee/deleteFile/' + id
       await axios.delete(url, {
         headers: {
           Authorization: 'Bearer ' + varToken,
@@ -88,6 +86,35 @@ export function Documents() {
   }
 
   const handleUpload = async (files: any) => {
+    if (files.length > 5) {
+      alert('Cannot upload more than 5 files')
+      return
+    }
+    try {
+      const varToken = localStorage.getItem('token')
+      const counturl = 'http://localhost:3000/api/v1/employee/loadFileCount'
+      const resp = await axios.get(counturl, {
+        headers: {
+          Authorization: 'Bearer ' + varToken,
+        },
+      })
+
+      if (resp) {
+        if (resp.data.data.total_files + files.length > 10) {
+          alert('You are only allowed to have 10 files in total, kindly rreconsider your upload')
+          return
+        }
+      }
+    } catch (err) {
+      console.log(err)
+    }
+    console.log(files[0].size)
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].size > 25000000) {
+        alert('File size cannot be greater than 25MB')
+        return
+      }
+    }
     const formData = new FormData()
 
     for (let i = 0; i < files.length; i++) {
@@ -133,6 +160,21 @@ export function Documents() {
       link.download = 'file.txt'
       link.click()
       return
+    } else if (
+      file.contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ) {
+      const file_name = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      console.log(file.contentType)
+      const uint8Array = new Uint8Array(file.data.data)
+      const blob = new Blob([uint8Array], {
+        type: file_name,
+      })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'file.docx'
+      link.click()
+      return
     }
 
     //for images
@@ -145,11 +187,13 @@ export function Documents() {
     const htmlString = `<html><body><img style="margin:auto; display:block" src="${url}" /></body></html>`
     newWindow.document.write(htmlString)
   }
+
   return (
     <>
       <div className='d-flex flex-wrap flex-stack mb-6'>
         <h3 className='fw-bolder my-2'>My Documents</h3>
-
+        {userFiles.length === 0 &&
+          'You have not uploaded any files yet. Please click on the upload button to upload your files'}
         <div className='d-flex my-2'>
           <a
             href='#'
@@ -157,6 +201,7 @@ export function Documents() {
             onClick={() => {
               const fileInput = document.createElement('input')
               fileInput.type = 'file'
+              fileInput.multiple = true
               fileInput.onchange = (event: any) => {
                 const files = event.target.files
                 handleUpload(files)
@@ -169,7 +214,7 @@ export function Documents() {
         </div>
       </div>
       <div>
-        <h6>Files</h6>
+        <h6>Files (Maximum 10 Files)</h6>
         <table className='table'>
           <thead>
             <tr>
