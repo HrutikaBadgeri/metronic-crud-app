@@ -3,10 +3,13 @@ import React from 'react'
 import axios from 'axios'
 import {useEffect} from 'react'
 import {useState} from 'react'
+import ProgressBar from '@ramonak/react-progress-bar'
 
 export function Documents() {
   const [userFiles, setUserFiles] = useState([])
   const [employee_id, setEmployee_id] = useState()
+  const [progress, setProgress] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     ;(async () => {
@@ -40,6 +43,7 @@ export function Documents() {
       },
     })
     setUserFiles(result.data.data)
+    setLoading(false)
   }
   const deleteFile = async (id: any) => {
     try {
@@ -91,6 +95,7 @@ export function Documents() {
       return
     }
     try {
+      setLoading(true)
       const varToken = localStorage.getItem('token')
       const counturl = 'http://localhost:3000/api/v1/employee/loadFileCount'
       const resp = await axios.get(counturl, {
@@ -102,11 +107,13 @@ export function Documents() {
       if (resp) {
         if (resp.data.data.total_files + files.length > 10) {
           alert('You are only allowed to have 10 files in total, kindly rreconsider your upload')
+          setLoading(false)
           return
         }
       }
     } catch (err) {
       console.log(err)
+      setLoading(false)
     }
     console.log(files[0].size)
     for (let i = 0; i < files.length; i++) {
@@ -129,6 +136,14 @@ export function Documents() {
           'Content-Type': 'multipart/form-data',
           Authorization: 'Bearer ' + varToken,
         },
+        // onUploadProgress: async (progressEvent) => {
+        //   const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        //   setProgress(percentCompleted)
+        //   if (percentCompleted === 100) {
+        //     await new Promise((resolve) => setTimeout(resolve, 5000))
+        //     setProgress(0)
+        //   }
+        // },
       })
 
       console.log(response.data.data)
@@ -137,6 +152,9 @@ export function Documents() {
     } catch (error) {
       alert("Can't upload files")
       console.error(error)
+    } finally {
+      setLoading(false)
+      setProgress(0)
     }
   }
 
@@ -190,86 +208,97 @@ export function Documents() {
 
   return (
     <>
-      <div className='d-flex flex-wrap flex-stack mb-6'>
-        <h3 className='fw-bolder my-2'>My Documents</h3>
-        {userFiles.length === 0 &&
-          'You have not uploaded any files yet. Please click on the upload button to upload your files'}
-        <div className='d-flex my-2'>
-          <a
-            href='#'
-            className='btn btn-primary btn-sm'
-            onClick={() => {
-              const fileInput = document.createElement('input')
-              fileInput.type = 'file'
-              fileInput.multiple = true
-              fileInput.onchange = (event: any) => {
-                const files = event.target.files
-                handleUpload(files)
-              }
-              fileInput.click()
-            }}
-          >
-            Upload File
-          </a>
+      {loading === true ? (
+        <div style={{textAlign: 'center'}}>
+          <h2>Loading the data...</h2>
         </div>
-      </div>
-      <div>
-        <h6>Files (Maximum 10 Files)</h6>
-        <table className='table'>
-          <thead>
-            <tr>
-              <th scope='col'>File Names</th>
-            </tr>
-          </thead>
-          {userFiles.map((file: any) => {
-            return (
-              <tbody key={file.name}>
+      ) : (
+        <>
+          <div className='d-flex flex-wrap flex-stack mb-6'>
+            <h3 className='fw-bolder my-2'>My Documents</h3>
+
+            <div className='d-flex my-2'>
+              <a
+                href='#'
+                className='btn btn-primary btn-sm'
+                onClick={() => {
+                  const fileInput = document.createElement('input')
+                  fileInput.type = 'file'
+                  fileInput.multiple = true
+                  fileInput.onchange = (event: any) => {
+                    const files = event.target.files
+                    handleUpload(files)
+                  }
+                  fileInput.click()
+                }}
+              >
+                Upload File
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <h6>Files (Maximum 10 Files)</h6>
+            {progress > 0 && <ProgressBar completed={progress} />}
+            <table className='table'>
+              <thead>
                 <tr>
-                  <th scope='row'>{file.name} </th>
-                  <td>{file.name}</td>
-                  <td>
-                    <button
-                      className='btn'
-                      style={{color: 'red'}}
-                      onClick={() => deleteFile(file._id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      type='button'
-                      className='btn'
-                      onClick={() => {
-                        const fileInput = document.createElement('input')
-                        fileInput.type = 'file'
-                        fileInput.onchange = (event: any) => {
-                          const files = event.target.files
-                          handleUpdate(files, file._id)
-                        }
-                        fileInput.click()
-                      }}
-                    >
-                      Update
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      type='button'
-                      className='btn'
-                      onClick={() => {
-                        handlePreview(file)
-                      }}
-                    >
-                      Preview
-                    </button>
-                  </td>
+                  <th scope='col'>File Names</th>
                 </tr>
-              </tbody>
-            )
-          })}
-        </table>
-      </div>
+              </thead>
+              {userFiles.map((file: any) => {
+                return (
+                  <tbody key={file.name}>
+                    <tr>
+                      <th scope='row'>{file.name} </th>
+                      <td>{file.name}</td>
+                      <td>
+                        <button
+                          className='btn'
+                          style={{color: 'red'}}
+                          onClick={() => deleteFile(file._id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          type='button'
+                          className='btn'
+                          onClick={() => {
+                            const fileInput = document.createElement('input')
+                            fileInput.type = 'file'
+                            fileInput.onchange = (event: any) => {
+                              const files = event.target.files
+                              handleUpdate(files, file._id)
+                            }
+                            fileInput.click()
+                          }}
+                        >
+                          Update
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          type='button'
+                          className='btn'
+                          onClick={() => {
+                            handlePreview(file)
+                          }}
+                        >
+                          Preview
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                )
+              })}
+            </table>
+          </div>
+          {userFiles.length === 0 &&
+            'You have not uploaded any files yet. Please click on the upload button to upload your files'}
+        </>
+      )}
     </>
   )
 }

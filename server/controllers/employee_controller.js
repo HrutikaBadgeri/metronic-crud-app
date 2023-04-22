@@ -134,7 +134,9 @@ export const uploadMultipleFiles = asyncWrapper(async (req, res) => {
       }
     );
   });
-
+  // setTimeout(() => {
+  //   res.status(200).json({ success: true, data: employeeUpdate });
+  // }, 2000);
   res.status(200).json({ success: true, data: employeeUpdate });
 });
 
